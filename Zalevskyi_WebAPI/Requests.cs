@@ -86,8 +86,23 @@ namespace Zalevskyi_WebAPI
         }
     }
 
+    public class ListFilesRequest : Request
+    {
+        public ListFilesRequest() : base()
+        {
+            return;
+        }
 
+        protected override void SetHead()
+        {
+            SetAuthentication();
+        }
 
+        protected override void SetBody()
+        {
+            restRequest.AddJsonBody(new { path = FileProperties.cloudFolder });
+        }
+    }
 
 
 

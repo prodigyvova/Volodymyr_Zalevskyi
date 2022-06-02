@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using RestSharp;
 using System.Net;
 
 namespace Zalevskyi_WebAPI
@@ -6,13 +7,15 @@ namespace Zalevskyi_WebAPI
     public class Authentication
     {
         public static string typeOfToken = "Bearer";
-        public static string token = "sl.BIk9KyrfeK4g8BeVmEi9PNeVDl1NDXk5UKRuRc9wgEKrImD4N558cGegn-B-upLLVvPCVg9cc7PARSMdOpnmUUzYRDZaj4gevhdGMvVgM3mTI5HexGFKvKGyE_WBxx5ip1ptwwBN-O5L";
+        public static string token = "sl.BIx5-K9vdTHpRGqwr5pNvZ9YRn50dCPkOtwDJmwc7gjrM5z045Ri6shxEuA4UfEdi_dSEqazuvx7xgNDCJXOauRgM8B24LAuHVLr5vqtc5WZEpmRafhldJllSQkWbVaYfonKM58wfpc2";
     }
 
     public class FileProperties
     {
         public static string localPath = "MyGif.gif";
         public static string cloudPath = "/MyGifs/MyGif.gif";
+        public static string cloudFolder = "/MyGifs";
+        public static string cloudFilename = "MyGif.gif";
     }
 
     public class Tests
@@ -22,22 +25,67 @@ namespace Zalevskyi_WebAPI
         {
         }
 
+        private bool CheckIfFileInFolder()
+        {
+            bool isFileInFolder = false;
+            string folderList = new ListFilesRequestSender().SendRequest().Content;
+            string nameProperty = " \"name\": " + "\"" + FileProperties.cloudFilename + "\"";
+
+            foreach (var property in folderList.Split(","))
+            {
+                if (string.Equals(property, nameProperty))
+                {
+                    isFileInFolder = true;
+                    break;
+                }
+            }
+            return isFileInFolder;
+        }
+
+        private bool CheckMetadata(IRestResponse response)
+        {
+            if (response.StatusCode != HttpStatusCode.OK)
+                return false;
+
+            bool isMetadataCorrect = true;
+
+
+            string metadata = response.Content;
+            string nameProperty = " \"name\": " + "\"" + FileProperties.cloudFilename + "\"";
+            string pathProperty = " \"path_display\": " + "\"" + FileProperties.cloudPath + "\"";
+
+
+            foreach (var property in metadata.Split(","))
+            {
+                if (property.Contains("\"name\""))
+                    if (property != nameProperty)
+                        isMetadataCorrect = false;
+
+                if (property.Contains("\"path_display\""))
+                    if (property != pathProperty)
+                        isMetadataCorrect = false;
+            }
+            return isMetadataCorrect;
+        } 
+
         [Test, Order(1)]
         public void UploadFileScenario()
         {
-            Assert.AreEqual(HttpStatusCode.OK, new UploadFileRequestSender().SendRequest().StatusCode);
+            new UploadFileRequestSender().SendRequest();
+            Assert.IsTrue(CheckIfFileInFolder());
         }
 
         [Test, Order(2)]
         public void GetFileMetadataScenario()
         {
-            Assert.AreEqual(HttpStatusCode.OK, new GetFileMetadataRequestSender().SendRequest().StatusCode);
+            Assert.IsTrue(CheckMetadata(new GetFileMetadataRequestSender().SendRequest()));
         }
 
         [Test, Order(3)]
         public void DeleteFileScenario()
         {
             Assert.AreEqual(HttpStatusCode.OK, new DeleteFileRequestSender().SendRequest().StatusCode);
+            Assert.IsFalse(CheckIfFileInFolder());
         }
     }
 }
